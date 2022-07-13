@@ -2,6 +2,8 @@
 
 namespace Spatie\Permission\Models;
 
+use App\Models\Folder;
+use EloquentFilter\Filterable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Permission\Contracts\Role as RoleContract;
@@ -15,6 +17,7 @@ use Spatie\Permission\Traits\RefreshesPermissionCache;
 
 class Role extends Model implements RoleContract
 {
+    use Filterable;
     use HasPermissions;
     use RefreshesPermissionCache;
 
@@ -96,7 +99,7 @@ class Role extends Model implements RoleContract
 
         $role = static::findByParam(['name' => $name, 'guard_name' => $guardName]);
 
-        if (! $role) {
+        if (!$role) {
             throw RoleDoesNotExist::named($name);
         }
 
@@ -117,7 +120,7 @@ class Role extends Model implements RoleContract
 
         $role = static::findByParam([(new static())->getKeyName() => $id, 'guard_name' => $guardName]);
 
-        if (! $role) {
+        if (!$role) {
             throw RoleDoesNotExist::withId($id);
         }
 
@@ -138,7 +141,7 @@ class Role extends Model implements RoleContract
 
         $role = static::findByParam(['name' => $name, 'guard_name' => $guardName]);
 
-        if (! $role) {
+        if (!$role) {
             return static::query()->create(['name' => $name, 'guard_name' => $guardName] + (PermissionRegistrar::$teams ? [PermissionRegistrar::$teamsKey => getPermissionsTeamId()] : []));
         }
 
@@ -189,10 +192,15 @@ class Role extends Model implements RoleContract
             $permission = $permissionClass->findById($permission, $this->getDefaultGuardName());
         }
 
-        if (! $this->getGuardNames()->contains($permission->guard_name)) {
+        if (!$this->getGuardNames()->contains($permission->guard_name)) {
             throw GuardDoesNotMatch::create($permission->guard_name, $this->getGuardNames());
         }
 
         return $this->permissions->contains($permission->getKeyName(), $permission->getKey());
+    }
+
+    public function foldersWithPermission()
+    {
+        return $this->morphToMany(Folder::class, 'folders_permissions')->withTimestamps();
     }
 }
